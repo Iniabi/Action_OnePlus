@@ -251,8 +251,9 @@ jobs:
 
 
       - name: Clean Build Artifacts
+        if: ${{ inputs.BUILD_METHOD == 'Bazel' }}
         run: |
-          rm -rf "${{ env.WORKSPACE }}/kernel_workspace"
+          rm -rf "${{ env.PLATFORM }}"
           rm -rf "${{ env.WORKSPACE }}/SukiSU_patch"
           rm -rf "${{ env.WORKSPACE }}/susfs4ksu"
           rm -rf "${{ env.WORKSPACE }}/sched_ext"
