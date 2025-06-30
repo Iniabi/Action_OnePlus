@@ -133,7 +133,7 @@ jobs:
 
           DEFCONFIG="$COMMON/arch/arm64/configs/gki_defconfig"
           echo "DEFCONFIG=$DEFCONFIG" >> $GITHUB_ENV
-          [[ "${{ inputs.enable_KPM }}" == "true" ]] && echo "CONFIG_KALLSYMS=y" >> "$DEFCONFIG"
+          [[ "${{ inputs.enable_KPM }}" == "true" ]] && echo "CONFIG_KPM=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> "$DEFCONFIG"
           echo "CONFIG_KSU_MANUAL_HOOK=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$DEFCONFIG"
