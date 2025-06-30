@@ -37,25 +37,49 @@ on:
         type: boolean
         
 permissions:
-  contents: write  
+  contents: write
+
 jobs:
   build:
     name: >-
       ${{ 
-        inputs.FILE == 'oneplus_ace5_pro' && 'Ace5Pro' ||
-        inputs.FILE == 'JiuGeFaCai_oneplus_ace5_pro_v' && 'JiuAce5Pro'
+        (github.event_name == 'schedule' && 'JiuACE5Pro') ||
+        (inputs.FILE == 'oneplus_ace5_pro' && 'ACE5Pro') ||
+        (inputs.FILE == 'JiuGeFaCai_oneplus_ace5_pro_v' && 'JiuACE5Pro')
       }}
-      (${{ inputs.BUILD_METHOD == 'Clang' && 'Clang' || 'Bazel' }})
+      (${{ 
+        (github.event_name == 'schedule' && 'Clang') ||
+        (inputs.BUILD_METHOD == 'Clang' && 'Clang') || 
+        'Bazel' 
+      }})
     runs-on: ubuntu-latest
     steps:
+      - name: Set Trigger Parameters
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "FILE=JiuGeFaCai_oneplus_ace5_pro_v" >> $GITHUB_ENV
+            echo "BUILD_METHOD=Clang" >> $GITHUB_ENV
+            echo "KERNEL_TIME=2024-12-04 02:11:46 UTC" >> $GITHUB_ENV
+            echo "KERNEL_NAME='-android15-8-g013ec21bba94-abogki383916444-4k'" >> $GITHUB_ENV
+            echo "enable_KPM=false" >> $GITHUB_ENV
+            echo "Release=false" >> $GITHUB_ENV
+          else
+            echo "FILE=${{ inputs.FILE }}" >> $GITHUB_ENV
+            echo "BUILD_METHOD=${{ inputs.BUILD_METHOD }}" >> $GITHUB_ENV
+            echo "KERNEL_TIME=${{ inputs.KERNEL_TIME }}" >> $GITHUB_ENV
+            echo "KERNEL_NAME=${{ inputs.KERNEL_NAME }}" >> $GITHUB_ENV
+            echo "enable_KPM=${{ inputs.enable_KPM }}" >> $GITHUB_ENV
+            echo "Release=${{ inputs.Release }}" >> $GITHUB_ENV
+          fi
+
       - name: Set Device
         run: |
-          DEVICE="${{ inputs.FILE }}"
+          DEVICE="${{ env.FILE }}"
           DEVICE="${DEVICE#*oneplus_}"
           DEVICE="${DEVICE#*oneplu_}"
           DEVICE="${DEVICE%%_*}"
           DEVICE="$(echo "$DEVICE" | sed -E 's/^([0-9]+)([a-z]+)/\1\U\2/; s/^([a-z])/\U\1/')"
-          DEVICE+="$(echo "${{ inputs.FILE }}" | sed -nE 's/.*_pro.*/Pro/p')"
+          DEVICE+="$(echo "${{ env.FILE }}" | sed -nE 's/.*_pro.*/Pro/p')"
           echo "DEVICE=OnePlus$DEVICE" >> $GITHUB_ENV
 
       - name: Set Environment
@@ -67,7 +91,7 @@ jobs:
           echo "WORKSPACE=$WORKSPACE_DIR" >> $GITHUB_ENV
           echo "PLATFORM=$PLATFORM_DIR" >> $GITHUB_ENV
           echo "COMMON=$COMMON_DIR" >> $GITHUB_ENV
-          echo "BAZEL_CACHE_DIR=$PLATFORM_DIR/out/bazel" >> $GITHUB_ENV
+          echo "BAZEL_CACHE_DIR=$PLATFORM_DIR/output/bazel" >> $GITHUB_ENV
           echo "DIST_DIR=$PLATFORM_DIR/output" >> $GITHUB_ENV
 
       - name: Install Dependencies
@@ -83,7 +107,7 @@ jobs:
       - name: Repo Sync
         run: |
           mkdir "$WORKSPACE" && cd "$WORKSPACE"
-          repo init -u https://github.com/OnePlusOSS/kernel_manifest.git -b refs/heads/oneplus/sm8750 -m ${{ inputs.FILE }}.xml --depth=1
+          repo init -u https://github.com/OnePlusOSS/kernel_manifest.git -b refs/heads/oneplus/sm8750 -m ${{ env.FILE }}.xml --depth=1
           repo sync -c -j$(nproc --all)
 
       - name: Set SukiSU
@@ -129,11 +153,11 @@ jobs:
           rm $PLATFORM/msm-kernel/android/abi_gki_protected_exports_*
           
           sed -i 's/check_defconfig//' "$PLATFORM/common/build.config.gki"
-          sed -i '$s|echo "${KERNELVERSION}${file_localversion}${config_localversion}${LOCALVERSION}${scm_version}"|echo "\${KERNELVERSION}${{ inputs.KERNEL_NAME }}"|' "$COMMON/scripts/setlocalversion"
+          sed -i '$s|echo "${KERNELVERSION}${file_localversion}${config_localversion}${LOCALVERSION}${scm_version}"|echo "\${KERNELVERSION}${{ env.KERNEL_NAME }}"|' "$COMMON/scripts/setlocalversion"
 
           DEFCONFIG="$COMMON/arch/arm64/configs/gki_defconfig"
           echo "DEFCONFIG=$DEFCONFIG" >> $GITHUB_ENV
-          [[ "${{ inputs.enable_KPM }}" == "true" ]] && echo "CONFIG_KPM=y" >> "$DEFCONFIG"
+          [[ "${{ env.enable_KPM }}" == "true" ]] && echo "CONFIG_KPM=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> "$DEFCONFIG"
           echo "CONFIG_KSU_MANUAL_HOOK=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$DEFCONFIG"
@@ -149,7 +173,7 @@ jobs:
           echo "CONFIG_DEFAULT_TCP_CONG=bbr" >> $DEFCONFIG
 
       - name: Cache Bazel artifacts
-        if: ${{ inputs.BUILD_METHOD == 'Bazel' }}
+        if: ${{ env.BUILD_METHOD == 'Bazel' }}
         uses: actions/cache@v3
         with:
          path: |
@@ -162,21 +186,21 @@ jobs:
 
       - name: Build Kernel
         run: |
-          if [[ "${{ inputs.BUILD_METHOD }}" == "Bazel" ]]; then
+          if [[ "${{ env.BUILD_METHOD }}" == "Bazel" ]]; then
             cd "$PLATFORM"
             
-            export SOURCE_DATE_EPOCH=$(date -d "${{ inputs.KERNEL_TIME }}" +%s)
+            export SOURCE_DATE_EPOCH=$(date -d "${{ env.KERNEL_TIME }}" +%s)
             echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" >> "$GITHUB_ENV"
             
             tools/bazel run --jobs=$(nproc) --lto=thin --config=stamp //common:kernel_aarch64_dist -- --dist_dir=output || { echo "内核构建失败"; exit 1; }
-          elif [[ "${{ inputs.BUILD_METHOD }}" == "Clang" ]]; then
+          elif [[ "${{ env.BUILD_METHOD }}" == "Clang" ]]; then
             cd "$COMMON"
             
             PREBUILT_CLANG="${{ env.PLATFORM }}/prebuilts/clang/host/linux-x86/clang-r510928/bin"
             PREBUILT_RUST="${{ env.PLATFORM }}/prebuilts/rust/linux-x86/1.73.0b/bin"
             PREBUILT_KERNEL_TOOLS="${{ env.PLATFORM }}/prebuilts/kernel-build-tools/linux-x86/bin"
             
-            export KBUILD_BUILD_TIMESTAMP=$(date -d "${{ inputs.KERNEL_TIME }}" -u "+%a %b %d %H:%M:%S %Z %Y")
+            export KBUILD_BUILD_TIMESTAMP=$(date -d "${{ env.KERNEL_TIME }}" -u "+%a %b %d %H:%M:%S %Z %Y")
             export KBUILD_BUILD_USER="kleaf"
             export KBUILD_BUILD_HOST="build-host"
             export PATH="$PREBUILT_CLANG:$PATH"
@@ -211,7 +235,7 @@ jobs:
           
           git clone https://github.com/Kernel-SU/AnyKernel3.git --depth=1
           
-          if [[ "${{ inputs.BUILD_METHOD }}" == "Bazel" ]]; then
+          if [[ "${{ env.BUILD_METHOD }}" == "Bazel" ]]; then
             IMAGE_DIR="$PLATFORM/output/"
           else
             IMAGE_DIR="$COMMON/out/arch/arm64/boot/"
@@ -220,7 +244,7 @@ jobs:
           cp "$IMAGE_DIR/Image" "$WORKSPACE/AnyKernel3/"
           cp "$IMAGE_DIR/Image" "$WORKSPACE/Out/"
           
-          if [[ "${{ inputs.enable_KPM }}" == "true" ]]; then
+          if [[ "${{ env.enable_KPM }}" == "true" ]]; then
             cd "$WORKSPACE/Out"
             curl -LO https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/releases/download/0.12.0/patch_linux
             chmod +x patch_linux && ./patch_linux
@@ -238,27 +262,26 @@ jobs:
           path: ${{ env.WORKSPACE }}/AnyKernel3/*
           
       - name: Create Release
-        if: ${{ inputs.Release }}
+        if: ${{ env.Release == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           name: "${{ env.DEVICE }}-${{ env.KSUVER }}"
           tag_name: "${{ env.KSUVER }}-${{ env.DEVICE }}"
           body: |
-            - Build method: `${{ inputs.BUILD_METHOD }}`
-            - Enable KPM: `${{ inputs.enable_KPM }}`
+            - Build method: `${{ env.BUILD_METHOD }}`
+            - Enable KPM: `${{ env.enable_KPM }}`
           files: |
             ${{ env.WORKSPACE }}/Out/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Clean Build Artifacts
-        if: ${{ inputs.BUILD_METHOD == 'Bazel' }}
+        if: ${{ env.BUILD_METHOD == 'Bazel' }}
         run: |
-          rm -rf "${{ env.PLATFORM }}"
           rm -rf "${{ env.WORKSPACE }}/SukiSU_patch"
           rm -rf "${{ env.WORKSPACE }}/susfs4ksu"
           rm -rf "${{ env.WORKSPACE }}/sched_ext"
+          find "${{ env.PLATFORM }}" -mindepth 1 -maxdepth 1 ! -name "output" -exec rm -rf {} +
           find . -name '*.o' -delete
           find . -name '*.tmp' -delete
           
