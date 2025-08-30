@@ -157,13 +157,13 @@ jobs:
           echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> "$DEFCONFIG"
           echo "CONFIG_KSU_SUSFS_ENABLE_LOG=n" >> "$DEFCONFIG"
           
-          echo "CONFIG_TCP_CONG_ADVANCED=y" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_BBR=y" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_BIC=n" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_CUBIC=n" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_WESTWOOD=n" >> $DEFCONFIG
-          echo "CONFIG_TCP_CONG_HTCP=n" >> $DEFCONFIG
-          echo "CONFIG_DEFAULT_TCP_CONG=bbr" >> $DEFCONFIG
+          # echo "CONFIG_TCP_CONG_ADVANCED=y" >> $DEFCONFIG
+          # echo "CONFIG_TCP_CONG_BBR=y" >> $DEFCONFIG
+          # echo "CONFIG_TCP_CONG_BIC=n" >> $DEFCONFIG
+          # echo "CONFIG_TCP_CONG_CUBIC=n" >> $DEFCONFIG
+          # echo "CONFIG_TCP_CONG_WESTWOOD=n" >> $DEFCONFIG
+          # echo "CONFIG_TCP_CONG_HTCP=n" >> $DEFCONFIG
+          # echo "CONFIG_DEFAULT_TCP_CONG=bbr" >> $DEFCONFIG
 
       - name: Cache Build Artifacts
         uses: actions/cache@v3
