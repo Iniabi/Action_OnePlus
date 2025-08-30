@@ -20,11 +20,11 @@ on:
       KERNEL_TIME:
         description: "Build date"
         required: true
-        default: '2024-12-17 23:36:49 UTC'
+        default: '2025-05-12 09:09:59 UTC'
       KERNEL_NAME:
         description: "Kernel name"
         required: true
-        default: '-android15-8-g013ec21bba94-abogki383916444-4k'
+        default: '-android15-8-g4dc61d72e02f-abogki415959920-4k'
       enable_KPM:
         description: "Enable KPM"
         required: false
@@ -130,8 +130,8 @@ jobs:
           cp ./SukiSU_patch/hooks/syscall_hooks.patch "$COMMON/"
           
           cd "$COMMON"
-          sed -i 's/-32,12 +32,38/-32,11 +32,37/g' 50_add_susfs_in_gki-android15-6.6.patch
-          sed -i '/#include <trace\/hooks\/fs.h>/d' 50_add_susfs_in_gki-android15-6.6.patch
+          # sed -i 's/-32,12 +32,38/-32,11 +32,37/g' 50_add_susfs_in_gki-android15-6.6.patch
+          # sed -i '/#include <trace\/hooks\/fs.h>/d' 50_add_susfs_in_gki-android15-6.6.patch
           patch -p1 < "50_add_susfs_in_gki-android15-6.6.patch"
           
           patch -p1 -F 3 < "syscall_hooks.patch"

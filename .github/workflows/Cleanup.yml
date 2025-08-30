@@ -29,7 +29,7 @@ jobs:
       - name: Cleanup Workflows
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MODE: ${{ inputs.cleanup_mode }}
+          MODE: ${{ inputs.cleanup_mode || 'default_cleanup' }}
           CURRENT_WORKFLOW: ${{ github.workflow }}
         run: |
           cat << 'EOF' > cleanup.py
